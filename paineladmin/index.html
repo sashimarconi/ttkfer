@@ -270,7 +270,7 @@
       rowsEl.innerHTML = "";
 
       try {
-        const response = await fetch(`/api/admin/transacoes?limit=${encodeURIComponent(limit)}`, {
+        const response = await fetch(`/admin-api/transacoes?limit=${encodeURIComponent(limit)}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

@@ -24,7 +24,7 @@
       "destination": "/paineladmin/index.html"
     },
     {
-      "source": "/api/admin/transacoes",
+      "source": "/admin-api/transacoes",
       "destination": "/api/admin/transacoes"
     },
     {
