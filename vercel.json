@@ -12,6 +12,14 @@
       "destination": "https://famosinhosoficial.com/assets/:path*"
     },
     {
+      "source": "/pix.svg",
+      "destination": "https://famosinhosoficial.com/pix.svg"
+    },
+    {
+      "source": "/:path*/pix.svg",
+      "destination": "https://famosinhosoficial.com/pix.svg"
+    },
+    {
       "source": "/api/create-pix",
       "destination": "/api/ghostspay/create-pix"
     },
