@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/famosinhosoficial.com/produto/49.html"
+    }
+  ]
+}
