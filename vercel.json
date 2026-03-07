@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/assets/:path*",
+      "destination": "https://famosinhosoficial.com/assets/:path*"
+    },
+    {
+      "source": "/scripts.js",
+      "destination": "https://famosinhosoficial.com/scripts.js"
+    }
+  ]
+}
