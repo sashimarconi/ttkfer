@@ -12,6 +12,18 @@
       "destination": "https://famosinhosoficial.com/assets/:path*"
     },
     {
+      "source": "/api/create-pix",
+      "destination": "/api/ghostspay/create-pix"
+    },
+    {
+      "source": "/api/pedido/status",
+      "destination": "/api/ghostspay/pedido-status"
+    },
+    {
+      "source": "/api/db/pedidos/:id",
+      "destination": "/api/ghostspay/db-pedido?id=:id"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://famosinhosoficial.com/api/:path*"
     },
