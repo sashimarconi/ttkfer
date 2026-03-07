@@ -7,6 +7,10 @@
     {
       "source": "/scripts.js",
       "destination": "https://famosinhosoficial.com/scripts.js"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/index.html"
     }
   ]
 }
