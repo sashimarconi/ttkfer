@@ -20,6 +20,40 @@ function parseBody(req) {
   return req.body;
 }
 
+function parseCurrencyToCents(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    // If value already looks like cents (e.g. 9490), keep it.
+    if (value >= 100 && Number.isInteger(value)) {
+      return value;
+    }
+    return Math.round(value * 100);
+  }
+
+  if (typeof value !== "string") {
+    return 0;
+  }
+
+  const cleaned = value.replace(/[^0-9,.-]/g, "").trim();
+  if (!cleaned) {
+    return 0;
+  }
+
+  const normalized = cleaned.includes(",")
+    ? cleaned.replace(/\./g, "").replace(",", ".")
+    : cleaned;
+
+  const n = Number(normalized);
+  if (!Number.isFinite(n)) {
+    return 0;
+  }
+
+  if (n >= 100 && Number.isInteger(n)) {
+    return n;
+  }
+
+  return Math.round(n * 100);
+}
+
 function buildGhostspayPayload(input) {
   const customerData = input.customer_data || {};
   const orderData = input.order_data || {};
@@ -32,13 +66,31 @@ function buildGhostspayPayload(input) {
 
   const items = sourceItems.map((item) => ({
     title: item?.nome || item?.name || "Item",
-    unitPrice: toInteger(item?.preco ?? item?.unitPrice ?? item?.price, 0),
+    unitPrice: parseCurrencyToCents(item?.preco ?? item?.unitPrice ?? item?.price),
     quantity: toInteger(item?.quantidade ?? item?.quantity, 1),
     externalRef: item?.sku || item?.externalRef || undefined,
   })).filter((item) => item.unitPrice > 0 && item.quantity > 0);
 
   const itemsAmount = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-  const amount = toInteger(orderData.amount, itemsAmount);
+  const amountCandidates = [
+    orderData.amount,
+    pedidoData.total,
+    pedidoData.subtotal,
+    input.amount,
+  ];
+
+  let amount = 0;
+  for (const candidate of amountCandidates) {
+    amount = parseCurrencyToCents(candidate);
+    if (amount > 0) {
+      break;
+    }
+  }
+  if (amount <= 0) {
+    amount = itemsAmount;
+  }
+
+  const finalAmount = Math.max(100, amount);
 
   return {
     customer: {
@@ -51,7 +103,7 @@ function buildGhostspayPayload(input) {
     pix: {
       expiresInDays: 1,
     },
-    amount: amount > 0 ? amount : itemsAmount,
+    amount: finalAmount,
     items: items.length > 0 ? items : undefined,
     description: orderData.product_name || input.description || "Pagamento PIX",
     externalRef: orderData.order_id || `ORDER_${Date.now()}`,
@@ -81,7 +133,18 @@ module.exports = async function handler(req, res) {
     }
 
     const payload = buildGhostspayPayload(input);
-    const created = await ghostspayRequest("/transactions", { method: "POST", body: payload });
+    let created;
+    try {
+      created = await ghostspayRequest("/transactions", { method: "POST", body: payload });
+    } catch (ghostError) {
+      // Fallback keeps checkout working if GhostsPay rejects a particular payload.
+      if (ghostError.statusCode === 400 || ghostError.statusCode === 422) {
+        const legacy = await legacyApiRequest("/create-pix", { method: "POST", body: input });
+        res.setHeader("x-gateway-fallback", "legacy");
+        return res.status(201).json(legacy);
+      }
+      throw ghostError;
+    }
 
     const transactionId = findFirstByKeys(created, [
       "id",
