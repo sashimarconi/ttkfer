@@ -12,6 +12,10 @@
       "destination": "https://famosinhosoficial.com/assets/:path*"
     },
     {
+      "source": "/api/:path*",
+      "destination": "https://famosinhosoficial.com/api/:path*"
+    },
+    {
       "source": "/scripts.js",
       "destination": "https://famosinhosoficial.com/scripts.js"
     },
