@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Admin</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --card: #171a21;
+      --line: #2a3040;
+      --text: #e8ecf2;
+      --muted: #9aa6bb;
+      --primary: #27d3c2;
+      --danger: #ff4d6d;
+      --ok: #46d39a;
+      --warn: #ffd166;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: radial-gradient(circle at 20% 0%, #1d2331 0%, var(--bg) 45%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 24px 16px 56px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: 24px;
+    }
+
+    .sub {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    input, select, button {
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #10141c;
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+
+    input, select {
+      min-height: 42px;
+    }
+
+    #token {
+      min-width: 300px;
+      flex: 1;
+    }
+
+    button {
+      background: linear-gradient(135deg, #1ccfb8, #0ea896);
+      border: 0;
+      color: #071014;
+      font-weight: 700;
+      cursor: pointer;
+      min-height: 42px;
+    }
+
+    button.secondary {
+      background: #202838;
+      color: #dbe5f4;
+      border: 1px solid var(--line);
+    }
+
+    .status {
+      margin-top: 10px;
+      color: var(--muted);
+      min-height: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 13px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: #b8c4db;
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .paid { background: rgba(70, 211, 154, 0.15); color: var(--ok); }
+    .pending { background: rgba(255, 209, 102, 0.14); color: var(--warn); }
+    .expired { background: rgba(255, 77, 109, 0.14); color: var(--danger); }
+
+    .mono {
+      font-family: Consolas, Monaco, monospace;
+      font-size: 12px;
+      word-break: break-all;
+      color: #cdd7e8;
+    }
+
+    .notice {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 760px) {
+      table, thead, tbody, tr, th, td {
+        display: block;
+      }
+
+      thead { display: none; }
+
+      tr {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        margin-bottom: 10px;
+        padding: 8px;
+      }
+
+      td {
+        border-bottom: 0;
+        padding: 6px 4px;
+      }
+
+      td::before {
+        content: attr(data-label) ": ";
+        color: #8ea0bf;
+        font-weight: 600;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Painel Admin</h1>
+      <p class="sub">Consulta de transacoes do checkout (PIX) via GhostsPay.</p>
+
+      <div class="row">
+        <input id="token" type="password" placeholder="ADMIN_PANEL_TOKEN">
+        <select id="limit">
+          <option value="15">15</option>
+          <option value="30" selected>30</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+        <button id="loadBtn">Carregar</button>
+        <button class="secondary" id="saveBtn">Salvar token</button>
+      </div>
+
+      <div class="status" id="status"></div>
+
+      <table id="table" hidden>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Status</th>
+            <th>Valor</th>
+            <th>Cliente</th>
+            <th>Transacao</th>
+            <th>PIX</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+
+      <p class="notice">Nao exiba nem armazene numero completo de cartao/CVV. Use tokenizacao do gateway para cartao.</p>
+    </div>
+  </div>
+
+  <script>
+    const tokenEl = document.getElementById("token");
+    const limitEl = document.getElementById("limit");
+    const loadBtn = document.getElementById("loadBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const statusEl = document.getElementById("status");
+    const tableEl = document.getElementById("table");
+    const rowsEl = document.getElementById("rows");
+
+    const saved = localStorage.getItem("admin_panel_token");
+    if (saved) {
+      tokenEl.value = saved;
+    }
+
+    function fmtMoney(cents) {
+      const value = Number(cents || 0) / 100;
+      return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    function fmtDate(value) {
+      if (!value) return "-";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return String(value);
+      return d.toLocaleString("pt-BR");
+    }
+
+    function statusClass(status) {
+      if (status === "paid") return "paid";
+      if (status === "expired") return "expired";
+      return "pending";
+    }
+
+    function renderRows(list) {
+      rowsEl.innerHTML = "";
+      for (const tx of list) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td data-label="Data">${fmtDate(tx.created_at)}</td>
+          <td data-label="Status"><span class="badge ${statusClass(tx.status)}">${tx.status || "pending"}</span></td>
+          <td data-label="Valor">${fmtMoney(tx.amount)}</td>
+          <td data-label="Cliente">${tx.customer_name || "-"}<br><small>${tx.customer_email || ""}</small></td>
+          <td data-label="Transacao" class="mono">${tx.transaction_id || "-"}</td>
+          <td data-label="PIX" class="mono">${tx.pix_code ? tx.pix_code.slice(0, 64) + "..." : "-"}</td>
+        `;
+        rowsEl.appendChild(tr);
+      }
+      tableEl.hidden = list.length === 0;
+    }
+
+    async function loadData() {
+      const token = tokenEl.value.trim();
+      const limit = limitEl.value;
+
+      if (!token) {
+        statusEl.textContent = "Informe o ADMIN_PANEL_TOKEN.";
+        return;
+      }
+
+      statusEl.textContent = "Carregando transacoes...";
+      tableEl.hidden = true;
+      rowsEl.innerHTML = "";
+
+      try {
+        const response = await fetch(`/api/admin/transacoes?limit=${encodeURIComponent(limit)}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const payload = await response.json();
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.error || `Erro ${response.status}`);
+        }
+
+        renderRows(payload.data || []);
+        statusEl.textContent = `OK: ${payload.count || 0} transacao(oes) carregada(s).`;
+      } catch (error) {
+        statusEl.textContent = `Falha: ${error.message}`;
+      }
+    }
+
+    saveBtn.addEventListener("click", () => {
+      localStorage.setItem("admin_panel_token", tokenEl.value.trim());
+      statusEl.textContent = "Token salvo neste navegador.";
+    });
+
+    loadBtn.addEventListener("click", loadData);
+  </script>
+</body>
+</html>

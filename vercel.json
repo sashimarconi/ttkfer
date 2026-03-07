@@ -20,6 +20,14 @@
       "destination": "https://famosinhosoficial.com/pix.svg"
     },
     {
+      "source": "/paineladmin",
+      "destination": "/paineladmin/index.html"
+    },
+    {
+      "source": "/api/admin/transacoes",
+      "destination": "/api/admin/transacoes"
+    },
+    {
       "source": "/api/create-pix",
       "destination": "/api/ghostspay/create-pix"
     },
