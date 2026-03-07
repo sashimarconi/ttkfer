@@ -1,4 +1,11 @@
 {
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/produto/49",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/assets/:path*",
