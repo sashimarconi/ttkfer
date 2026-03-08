@@ -18,6 +18,42 @@ function convertStatusToPedido(status) {
   return "pendente";
 }
 
+function centsToReais(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    return 0;
+  }
+
+  // GhostsPay typically returns integer values in cents.
+  if (Number.isInteger(n)) {
+    return n / 100;
+  }
+
+  return n;
+}
+
+function parseCurrencyToReais(value) {
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return 0;
+  }
+
+  const cleaned = value.replace(/[^0-9,.-]/g, "").trim();
+  if (!cleaned) {
+    return 0;
+  }
+
+  const normalized = cleaned.includes(",")
+    ? cleaned.replace(/\./g, "").replace(",", ".")
+    : cleaned;
+
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : 0;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
@@ -46,10 +82,13 @@ module.exports = async function handler(req, res) {
     const rawStatus = findFirstByKeys(details, ["status", "payment_status", "transaction_status"]);
     const normalizedStatus = normalizePaymentStatus(rawStatus);
 
-    const amount = toInteger(
-      findFirstByKeys(details, ["amount", "value", "total"]),
-      toInteger(metadata?.order_data?.amount, 0)
-    );
+    const amountRaw = findFirstByKeys(details, ["amount", "value", "total"]);
+    const amountFromGateway = centsToReais(amountRaw);
+    const amountFromMetadata = parseCurrencyToReais(metadata?.pedido_data?.total || metadata?.order_data?.amount);
+    const amount = amountFromMetadata > 0 ? amountFromMetadata : amountFromGateway;
+
+    const subtotal = parseCurrencyToReais(metadata?.pedido_data?.subtotal);
+    const desconto = parseCurrencyToReais(metadata?.pedido_data?.desconto);
 
     const pixCode = findFirstByKeys(details, [
       "pix_code",
@@ -86,8 +125,8 @@ module.exports = async function handler(req, res) {
       cep_entrega: metadata?.pedido_data?.cep_entrega || null,
       itens: items,
       total: amount,
-      desconto: toInteger(metadata?.pedido_data?.desconto, 0),
-      subtotal: toInteger(metadata?.pedido_data?.subtotal, amount),
+      desconto: desconto,
+      subtotal: subtotal > 0 ? subtotal : amount,
       status: convertStatusToPedido(normalizedStatus),
       status_pagamento: normalizedStatus,
       status_entrega: null,
